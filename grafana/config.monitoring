@@ -1,0 +1,9 @@
+GF_SECURITY_ADMIN_PASSWORD=<password>
+GF_DATABASE_TYPE=mysql
+GF_DATABASE_HOST=rc1b-5fru1ko797lyem0e.mdb.yandexcloud.net:3306
+GF_DATABASE_NAME=<dbname>
+GF_DATABASE_USER=<login>
+GF_DATABASE_PASSWORD=<password>
+GF_DATABASE_SSL_MODE=true
+GF_DATABASE_CA_CERT_PATH=/etc/ssl/CA.pem
+GF_DATABASE_SERVER_CERT_NAME=rc1b-5fru1ko797lyem0e.mdb.yandexcloud.net

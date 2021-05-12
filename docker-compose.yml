@@ -1,0 +1,109 @@
+version: '3.2'
+
+networks: 
+    monitoring:
+        driver: bridge
+
+volumes:
+    nginx_data: {}
+    grafana_data: {}
+services:
+
+    #Web-server
+    nginx:
+        image: nginx
+        container_name: nginx
+        volumes: 
+            - ./nginx/html:/usr/share/nginx/html/
+            - ./nginx/:/etc/nginx/conf.d/
+        ports:
+            - 80:80
+        networks: 
+            - monitoring
+        restart: always
+
+    #Мониторинг nginx    
+    nginx-exporter:
+        image: nginx/nginx-prometheus-exporter
+        container_name: nginx-exporter
+        command: 
+            - -nginx.scrape-uri
+            - http://nginx:80/stub_status
+        ports:
+            - 9113:9113
+        restart: always  
+        networks: 
+            - monitoring
+        depends_on: 
+            - nginx 
+
+    #Prometheus      
+    prometheus:
+        image: prom/prometheus:latest
+        container_name: prometheus
+        volumes:
+            - ./prometheus:/etc/prometheus/
+        command:
+            - --config.file=/etc/prometheus/prometheus.yml
+        ports:
+            - 9090:9090
+        networks: 
+            - monitoring
+        restart: always
+
+    #Grafana        
+    grafana:
+        image: grafana/grafana
+        container_name: grafana
+        ports:
+            - 3000:3000
+        networks: 
+            - monitoring
+        volumes:
+            - grafana_data:/etc/grafana
+            - ./grafana/ssl/:/etc/ssl/
+            - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+            - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+        env_file:
+            - ./grafana/config.monitoring
+        restart: always
+        depends_on: 
+            - prometheus
+
+    #Мониторинг хоста
+    node-exporter:
+        image: prom/node-exporter
+        container_name: node-exporter
+        volumes:
+            - /proc:/host/proc:ro
+            - /sys:/host/sys:ro
+            - /:/rootfs:ro
+        command:
+            - --path.procfs=/host/proc
+            - --path.sysfs=/host/sys
+            - --collector.filesystem.ignored-mount-points
+            - ^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)
+        ports:
+            - 9100:9100
+        networks: 
+            - monitoring
+        restart: always
+        depends_on: 
+            - prometheus
+
+    #Мониторинг контейнеров
+    cadvisor:
+        image: google/cadvisor
+        container_name: cadvisor
+        volumes:
+            - /:/rootfs:ro
+            - /var/run:/var/run:rw
+            - /sys:/sys:ro
+            - /var/lib/docker/:/var/lib/docker:ro
+        ports:
+            - 8081:8080
+        networks: 
+            - monitoring
+        restart: always
+        depends_on: 
+            - prometheus
